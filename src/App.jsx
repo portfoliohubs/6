@@ -801,7 +801,7 @@ export default function App() {
               <button
                 disabled={!unlocked}
                 onClick={downloadPDF}
-                className="w-full py-3 px-4 rounded-xl text-white font-semibold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed pdf-btn"
+                className={`w-full py-3 px-4 rounded-xl text-white font-semibold transition-all shadow-sm ${unlocked ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200 shadow-md' : 'bg-slate-300 cursor-not-allowed opacity-60'}`}
               >
                 {unlocked ? `⬇  Download Portfolio PDF` : 'Locked — Activate to Download'}
               </button>
