@@ -13,13 +13,6 @@ import { DentalFolioConfig } from './config.js'
 const { SECRET_SALT, TIER_MAP, WHATSAPP_NUMBER, APP_NAME, TAGLINE, EGYPT_FACULTIES } = DentalFolioConfig
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
-
-
-
-// ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -41,18 +34,14 @@ const DEFAULT_DOCTOR = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 let _iqActive = 0
-const _iqQueue: Array<{
-  fileoptions
-  resolve => void
-  reject: (e: any) => void
-}> = []
+const _iqQueue = []
 
 function _iqNext() {
   if (!_iqQueue.length || _iqActive >= 3) return
-  const { file, opts, resolve, reject } = _iqQueue.shift()!
+  const { file, opts, resolve, reject } = _iqQueue.shift()
   _iqActive++
   imageCompression(file, opts)
-    .then(r => { _iqActive--; resolve(r ); _iqNext() })
+    .then(r => { _iqActive--; resolve(r); _iqNext() })
     .catch(e => { _iqActive--; reject(e); _iqNext() })
 }
 
@@ -92,7 +81,7 @@ function ctEqual(a, b) {
 
 function _enc(s) { try { return btoa(unescape(encodeURIComponent(s||''))) } catch { return btoa(s || '') } }
 function _dec(b) { try { return decodeURIComponent(escape(atob(b || ''))) } catch { try { return atob(b || '') } catch { return '' } } }
-function _parseMeta(raw ) {
+function _parseMeta(raw) {
   try {
     if (!raw) return null
     const p = String(raw).split('|')
@@ -110,9 +99,9 @@ const C_DARK = rgb(0.06, 0.10, 0.18)
 const C_MID  = rgb(0.25, 0.25, 0.25)
 const C_GREY = rgb(0.45, 0.45, 0.45)
 
-function pdfWrap(text, size, font, maxW)[] {
+function pdfWrap(text, size, font, maxW) {
   if (!text?.trim()) return []
-  const lines[] = []
+  const lines = []
   for (const para of text.split('\n')) {
     if (!para.trim()) { lines.push(''); continue }
     const words = para.split(' ').filter(Boolean)
@@ -164,7 +153,7 @@ function pdfDivider(page, y, short = false) {
   page.drawLine({ start:{x:pad,y}, end:{x:PW-pad,y}, thickness: 0.4, color: rgb(0.78,0.78,0.78) })
 }
 
-function pdfNewPage(doc: PDFDocument) {
+function pdfNewPage(doc) {
   const p = doc.addPage([PW, PH])
   p.drawRectangle({ x:0, y:0, width:PW, height:PH, color:rgb(1,1,1) })
   return p
@@ -174,14 +163,11 @@ function pdfNewPage(doc: PDFDocument) {
 // PDF GENERATOR
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function generateDentalPDF(args: {
-  doctor; cases?; maxCases?; usedCases?; activationKey?
-) {
-  const { doctor, cases = [], maxCases = 20, usedCases = 0, activationKey = '' } = args
+async function generateDentalPDF({ doctor, cases = [], maxCases = 20, usedCases = 0, activationKey = '' }) {
   const pdfDoc = await PDFDocument.create()
   const metaStr = `DentalFolio-V1|${_enc(doctor.name||'')}|${maxCases}|${usedCases}|${_enc(activationKey)}`
-  try { (pdfDoc as any).setKeywords?.([metaStr]) } catch {}
-  try { (pdfDoc as any).setTitle?.('DentalFolio Portfolio') } catch {}
+  try { pdfDoc.setKeywords?.([metaStr]) } catch {}
+  try { pdfDoc.setTitle?.('DentalFolio Portfolio') } catch {}
 
   const R  = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const B  = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
@@ -227,7 +213,7 @@ async function generateDentalPDF(args: {
   }
 
   cy -= 28
-  const contacts: [string, string][] = []
+  const contacts = []
   if (doctor.phone)    contacts.push(['Phone',    doctor.phone])
   if (doctor.whatsapp) contacts.push(['WhatsApp', doctor.whatsapp])
   if (doctor.email)    contacts.push(['Email',    doctor.email])
@@ -248,7 +234,7 @@ async function generateDentalPDF(args: {
     pdfFooter(sp, doctor.name||'Doctor', year, R)
     let sy = PH - 68
     pdfDC(sp, 'PROFESSIONAL SKILLS', sy, 16, B, C_DARK); sy -= 10; pdfDivider(sp, sy); sy -= 34
-    for (const [lbl, txt] of [['Clinical Skills', doctor.skills.clinical], ['Digital Skills', doctor.skills.digital], ['Soft Skills', doctor.skills.soft]] as [string,string][]) {
+    for (const [lbl, txt] of [['Clinical Skills', doctor.skills.clinical], ['Digital Skills', doctor.skills.digital], ['Soft Skills', doctor.skills.soft]]) {
       if (!txt?.trim()) continue
       pdfDC(sp, lbl, sy, 12, B, C_MID); sy -= 18
       sy = pdfDCW(sp, txt, sy, 10, R, C_GREY, PW - PM*2 - 20); sy -= 24
@@ -338,12 +324,12 @@ async function parseDentalMetadata(file) {
     if (file.type !== 'application/pdf' && !file.name?.toLowerCase().endsWith('.pdf'))
       return { meta:null, error:'not_pdf' }
     if (file.size > 50*1024*1024) return { meta:null, error:'file_too_large' }
-    let pdfDoc: PDFDocument
+    let pdfDoc
     try { pdfDoc = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true }) }
     catch { return { meta:null, error:'corrupted_or_encrypted' } }
-    const kw   = typeof (pdfDoc as any).getKeywords === 'function' ? (pdfDoc as any).getKeywords() : null
+    const kw   = typeof pdfDoc.getKeywords === 'function' ? pdfDoc.getKeywords() : null
     let   meta = Array.isArray(kw) && kw.length ? _parseMeta(kw[0]) : null
-    if (!meta) meta = _parseMeta(typeof (pdfDoc as any).getTitle === 'function' ? (pdfDoc as any).getTitle() : null)
+    if (!meta) meta = _parseMeta(typeof pdfDoc.getTitle === 'function' ? pdfDoc.getTitle() : null)
     return meta ? { meta, error:null } : { meta:null, error:'no_dentalfolio_metadata' }
   } catch { return { meta:null, error:'unexpected' } }
 }
@@ -390,7 +376,7 @@ function Header() {
 // COMPONENT: Section  (collapsible card wrapper)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title; children }) {
+function Section({ title, children }) {
   const [open, setOpen] = useState(true)
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -411,25 +397,21 @@ function Section({ title, children }: { title; children }) {
 // COMPONENT: DoctorForm
 // ─────────────────────────────────────────────────────────────────────────────
 
-function DoctorForm({ doctor, setDoctor, appendMode, onImportPDF }: {
-  doctor
-  setDoctor
-  appendModeonImportPDF: (file) => void
-}) {
-  const patch     = (p: Partial<DoctorInfo>) => setDoctor(d => ({ ...d, ...p }))
-  const patchSkill = (key: keyof DoctorInfo['skills'], val) =>
+function DoctorForm({ doctor, setDoctor, appendMode, onImportPDF }) {
+  const patch      = (p) => setDoctor(d => ({ ...d, ...p }))
+  const patchSkill = (key, val) =>
     setDoctor(d => ({ ...d, skills: { ...d.skills, [key]: val } }))
 
-  async function handlePhoto(file | undefined) {
+  async function handlePhoto(file) {
     if (!file) return
     try {
       const comp = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 2000, useWebWorker: true })
-      patch({ profileImage: { blob: comp , url: URL.createObjectURL(comp) } })
+      patch({ profileImage: { blob: comp, url: URL.createObjectURL(comp) } })
     } catch(e) { console.debug('photo', e); alert('Failed to process image — try a smaller file.') }
   }
 
   const addRow    = () => setDoctor(d => ({ ...d, timeline: [...(d.timeline||[]), { year:'', event:'' }] }))
-  const editRow   = (i, f: 'year'|'event', v) =>
+  const editRow   = (i, f, v) =>
     setDoctor(d => { const t = [...(d.timeline||[])]; t[i] = { ...t[i], [f]: v }; return { ...d, timeline: t } })
   const removeRow = (i) => setDoctor(d => ({ ...d, timeline: (d.timeline||[]).filter((_,j) => j !== i) }))
 
@@ -550,11 +532,7 @@ function DoctorForm({ doctor, setDoctor, appendMode, onImportPDF }: {
 // COMPONENT: CaseManager
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CaseManager({ cases, setCases, maxCases, usedCases }: {
-  cases
-  setCases
-  maxCasesusedCases
-}) {
+function CaseManager({ cases, setCases, maxCases, usedCases }) {
   const [filter, setFilter] = useState('All')
   const remaining = Math.max(0, maxCases - usedCases - cases.length)
 
@@ -596,7 +574,7 @@ function CaseManager({ cases, setCases, maxCases, usedCases }: {
         <label className="cursor-pointer px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
           + Add Images
           <input type="file" accept="image/*" multiple className="hidden"
-            onChange={e => { Array.from(e.target.files||[]).forEach(f => addCase(f)); (e.target as HTMLInputElement).value = '' }} />
+            onChange={e => { Array.from(e.target.files||[]).forEach(f => addCase(f)); e.target.value = '' }} />
         </label>
 
         <span className="ml-auto text-sm text-slate-400">{cases.length} / {maxCases - usedCases} added</span>
@@ -647,12 +625,7 @@ function CaseManager({ cases, setCases, maxCases, usedCases }: {
 // COMPONENT: KeyValidator
 // ─────────────────────────────────────────────────────────────────────────────
 
-function KeyValidator({ doctor, activationKey, setActivationKey, unlocked, setUnlocked, maxCases, usedCases, setMaxCases }: {
-  doctor
-  activationKey; setActivationKey: (k) => void
-  unlocked;    setUnlocked: (v) => void
-  maxCases;     usedCases;  setMaxCases: (n) => void
-}) {
+function KeyValidator({ doctor, activationKey, setActivationKey, unlocked, setUnlocked, maxCases, usedCases, setMaxCases }) {
   const tierNames = Object.keys(TIER_MAP)
   const [tier, setTier] = useState(tierNames[1] ?? tierNames[0])
 
@@ -766,7 +739,7 @@ export default function App() {
     try {
       const blob = await generateDentalPDF({ doctor, cases, maxCases, usedCases, activationKey })
       const url  = URL.createObjectURL(blob)
-      if (/iP(ad|hone|od)/.test(navigator.userAgent) && !(window as any).MSStream)
+      if (/iP(ad|hone|od)/.test(navigator.userAgent) && !window.MSStream)
         alert("On iOS: in the new tab tap the Share icon → 'Save to Files' to download.")
       const a = Object.assign(document.createElement('a'), { href: url, download: `${doctor.name || APP_NAME}.pdf` })
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
@@ -779,7 +752,7 @@ export default function App() {
   async function importPDF(file) {
     const { meta, error } = await parseDentalMetadata(file)
     if (error) {
-      const msgs: Record<string,string> = {
+      const msgs = {
         no_file:'No file provided.', not_pdf:'File is not a PDF.',
         file_too_large:'File exceeds 50 MB limit.',
         corrupted_or_encrypted:'File is corrupted or encrypted.',
